@@ -3,292 +3,65 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#10b981">
-<meta name="description" content="OMH Social Services — خدمات دیجیتال سریع، مطمئن و حرفه‌ای">
+<meta name="theme-color" content="#03101f">
+<meta name="description" content="OMH Social Services — مرجع خدمات نوین دیجیتال">
 <title>OMH Social Services</title>
-<link rel="icon" href="images/omh-logo.svg" type="image/svg+xml">
+<link rel="icon" href="images/omh-logo.png" type="image/png">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- ========== HEADER ========== -->
+<div class="page-glow glow-one"></div><div class="page-glow glow-two"></div>
 <header class="site-header" id="header">
   <div class="container header-inner">
-    <button class="icon-btn menu-btn" id="hamburger" type="button" aria-label="باز کردن منو" aria-expanded="false" aria-controls="navMenu">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-
-    <a class="brand" href="#home" aria-label="صفحه اصلی">
-      <span class="brand-mark"><img id="headerLogo" src="images/omh-logo.svg" alt="OMH logo"></span>
-      <span class="brand-copy">
-        <b data-site-name>OMH Social Services</b>
-        <small>سریع • مطمئن • حرفه‌ای</small>
-      </span>
+    <button class="menu-btn" id="hamburger" type="button" aria-label="منو" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+    <a class="brand" href="#home" aria-label="OMH Social Services">
+      <span class="brand-logo"><img id="headerLogo" src="images/omh-logo.png" alt="OMH Social Services"></span>
+      <span class="brand-text"><strong data-site-name>OMH Social Services</strong><small>مرجع خدمات نوین دیجیتال</small></span>
     </a>
-
-    <nav class="nav-menu" id="navMenu" aria-label="منوی اصلی">
-      <a href="#home" class="active">خانه</a>
-      <a href="#services">خدمات</a>
-      <a href="#posts">نشرات</a>
-      <a href="#reviews">نظرات</a>
-      <a href="#about">درباره ما</a>
-      <a href="#contact">تماس</a>
+    <nav class="nav-menu" id="navMenu">
+      <a class="active" href="#home">خانه</a><a href="#services">خدمات</a><a href="#posts">نشرات</a><a href="#reviews">نظرات</a><a href="#about">درباره ما</a><a href="#contact">تماس</a>
     </nav>
-
-    <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="تغییر حالت رنگ">
-      <i class="fa-solid fa-moon"></i>
-      <span>تاریک</span>
-    </button>
+    <div class="header-actions"><a class="header-order" href="#services"><i class="fa-solid fa-bolt"></i> شروع سفارش</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="تغییر حالت"><i class="fa-solid fa-moon"></i></button></div>
   </div>
 </header>
-
-<!-- ========== ANNOUNCEMENTS ========== -->
-<div class="announcement-list" id="announcementList" hidden aria-live="polite"></div>
-
+<div class="announcement-wrap"><div class="container" id="announcementList" hidden></div></div>
 <main>
-
-  <!-- ========== HERO ========== -->
-  <section class="hero" id="home">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <span class="eyebrow"><i class="fa-solid fa-bolt"></i> OMH Social Services</span>
-        <h1>خدمات دیجیتال، <span>سریع و مطمئن</span></h1>
-        <p>خدمات آنلاین و شبکه‌های اجتماعی را ساده‌تر، سریع‌تر و با پشتیبانی در دسترس دریافت کنید.</p>
-        <div class="hero-actions">
-          <a href="#services" class="btn btn-primary"><i class="fa-solid fa-grip"></i> مشاهده خدمات</a>
-          <a href="#contact" class="btn btn-ghost"><i class="fa-brands fa-whatsapp"></i> تماس با ما</a>
-        </div>
-        <div class="hero-points">
-          <span><i class="fa-solid fa-circle-check"></i> سفارش آسان</span>
-          <span><i class="fa-solid fa-headset"></i> پشتیبانی</span>
-          <span><i class="fa-solid fa-shield-halved"></i> تمرکز بر امنیت</span>
-        </div>
-      </div>
-      <div class="hero-panel" aria-hidden="true">
-        <div class="orb orb-a"></div>
-        <div class="orb orb-b"></div>
-        <div class="hero-card">
-          <img src="images/omh-logo.svg" alt="">
-          <strong>OMH</strong>
-          <span>خدمات دیجیتال</span>
-          <div class="hero-card-row">
-            <span><i class="fa-solid fa-bolt"></i> سریع</span>
-            <span><i class="fa-solid fa-star"></i> حرفه‌ای</span>
-          </div>
-        </div>
-      </div>
+<section class="hero" id="home">
+  <div class="hero-bg"></div><div class="hero-overlay"></div>
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <div class="hero-chip"><span class="live-dot"></span> OMH Social Services <b>خدمات دیجیتال</b></div>
+      <h1>دنیای دیجیتال تو،<br><span>یک قدم حرفه‌ای‌تر</span></h1>
+      <p>خدمات شبکه‌های اجتماعی، شماره مجازی، طراحی سایت، اپلیکیشن و خدمات دیجیتال با یک تجربه ساده، منظم و قابل اعتماد.</p>
+      <div class="hero-buttons"><a href="#services" class="btn btn-primary"><i class="fa-solid fa-layer-group"></i> مشاهده سرویس‌ها</a><a id="heroWhatsapp" href="#" class="btn btn-glass"><i class="fa-brands fa-whatsapp"></i> مشاوره در واتساپ</a></div>
+      <div class="hero-trust"><span><i class="fa-solid fa-circle-check"></i> سفارش آسان</span><span><i class="fa-solid fa-headset"></i> پشتیبانی</span><span><i class="fa-solid fa-shield-halved"></i> تجربه حرفه‌ای</span></div>
     </div>
-  </section>
-
-  <!-- ========== TRUST ========== -->
-  <section class="trust" aria-label="مزیت‌های ما">
-    <div class="container trust-grid">
-      <article><i class="fa-solid fa-bolt"></i><div><b>تحویل سریع</b><span>رسیدگی سریع به سفارش</span></div></article>
-      <article><i class="fa-solid fa-shield-halved"></i><div><b>مطمئن</b><span>تمرکز بر اعتبار و امنیت</span></div></article>
-      <article><i class="fa-solid fa-headset"></i><div><b>پشتیبانی</b><span>ارتباط آسان با ما</span></div></article>
-      <article><i class="fa-solid fa-star"></i><div><b>کیفیت</b><span>خدمات متنوع و کاربردی</span></div></article>
-    </div>
-  </section>
-
-  <!-- ========== SERVICES ========== -->
-  <section class="section services" id="services" aria-labelledby="servicesTitle">
-    <div class="container">
-      <div class="section-heading">
-        <div>
-          <span class="section-kicker">خدمات ما</span>
-          <h2 id="servicesTitle">سرویس مورد نیازت را پیدا کن</h2>
-        </div>
-        <p>از دسته‌بندی و زیردسته استفاده کن یا نام سرویس را جستجو کن.</p>
-      </div>
-
-      <div class="service-tools">
-        <label class="search-box" aria-label="جستجوی خدمات">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input id="searchInput" type="search" placeholder="جستجوی سرویس..." autocomplete="off">
-        </label>
-      </div>
-
-      <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="دسته‌بندی خدمات"></div>
-      <div class="subcategory-tabs" id="subcategoryTabs" role="tablist" aria-label="زیردسته‌ها"></div>
-
-      <div class="services-grid" id="servicesGrid" aria-live="polite" aria-busy="true">
-        <div class="loading-card"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال بارگذاری خدمات...</span></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========== POSTS ========== -->
-  <section class="section posts" id="posts" aria-labelledby="postsTitle">
-    <div class="container">
-      <div class="section-heading">
-        <div>
-          <span class="section-kicker">نشرات</span>
-          <h2 id="postsTitle">مطالب منتخب</h2>
-        </div>
-        <p>آخرین مطالب منتشرشده توسط OMH.</p>
-      </div>
-      <div class="posts-grid" id="postsGrid" aria-live="polite" aria-busy="true">
-        <div class="loading-card"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال بارگذاری...</span></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========== REVIEWS ========== -->
-  <section class="section reviews" id="reviews" aria-labelledby="reviewsTitle">
-    <div class="container">
-      <div class="section-heading">
-        <div>
-          <span class="section-kicker">اعتماد مشتریان</span>
-          <h2 id="reviewsTitle">نظرات مشتریان</h2>
-        </div>
-        <p>نظر شما پس از بررسی در سایت نمایش داده می‌شود.</p>
-      </div>
-
-      <div class="review-layout">
-        <form id="reviewForm" class="review-form" novalidate>
-          <div class="form-title">
-            <span class="mini-icon"><i class="fa-solid fa-star"></i></span>
-            <div>
-              <h3>نظر خود را ثبت کنید</h3>
-              <p>کمتر از یک دقیقه زمان می‌گیرد.</p>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <label for="reviewName">نام
-              <input id="reviewName" name="customer_name" maxlength="80" required placeholder="نام شما" autocomplete="name">
-            </label>
-            <label for="reviewService">سرویس
-              <select id="reviewService" name="service_id" required>
-                <option value="">انتخاب سرویس</option>
-              </select>
-            </label>
-            <label for="reviewRating">امتیاز
-              <select id="reviewRating" name="rating" required>
-                <option value="">انتخاب</option>
-                <option value="5">★★★★★ عالی</option>
-                <option value="4">★★★★ خوب</option>
-                <option value="3">★★★ متوسط</option>
-                <option value="2">★★ ضعیف</option>
-                <option value="1">★ خیلی ضعیف</option>
-              </select>
-            </label>
-          </div>
-
-          <label for="reviewComment">نظر شما
-            <textarea id="reviewComment" name="comment" maxlength="1000" required placeholder="تجربه خود را بنویسید..."></textarea>
-          </label>
-
-          <button class="btn btn-primary" type="submit">
-            <i class="fa-solid fa-paper-plane"></i> ارسال نظر
-          </button>
-
-          <p id="reviewMessage" class="form-message" role="status" aria-live="polite"></p>
-        </form>
-
-        <div class="reviews-grid" id="reviewsGrid" aria-live="polite" aria-busy="true">
-          <div class="loading-card"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال بارگذاری نظرات...</span></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========== ABOUT ========== -->
-  <section class="section about" id="about" aria-labelledby="aboutTitle">
-    <div class="container about-card">
-      <div>
-        <span class="section-kicker">درباره OMH</span>
-        <h2 id="aboutTitle">ساده، سریع و قابل اعتماد</h2>
-        <p>OMH Social Services برای دسترسی آسان‌تر به خدمات دیجیتال و شبکه‌های اجتماعی ساخته شده است؛ با تمرکز بر تجربه خوب، ارتباط آسان و ارائه خدمات کاربردی.</p>
-      </div>
-      <div class="about-badge">
-        <i class="fa-solid fa-bolt"></i>
-        <b>OMH</b>
-        <span>Social Services</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========== CONTACT ========== -->
-  <section class="section contact" id="contact" aria-labelledby="contactTitle">
-    <div class="container">
-      <div class="section-heading centered">
-        <span class="section-kicker">ارتباط با ما</span>
-        <h2 id="contactTitle">هر وقت خواستی، در دسترسیم</h2>
-        <p>برای سفارش یا پرسش، از راه‌های زیر با ما تماس بگیر.</p>
-      </div>
-
-      <div class="contact-grid">
-        <a id="whatsappLink" class="contact-card whatsapp" href="#" rel="noopener noreferrer">
-          <i class="fa-brands fa-whatsapp"></i>
-          <span><b>WhatsApp</b><small>تماس و سفارش</small></span>
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <a id="telegramLink" class="contact-card telegram" href="#" rel="noopener noreferrer">
-          <i class="fa-brands fa-telegram"></i>
-          <span><b>Telegram</b><small>ارتباط با ما</small></span>
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <a id="instagramLink" class="contact-card instagram" href="#" rel="noopener noreferrer">
-          <i class="fa-brands fa-instagram"></i>
-          <span><b>Instagram</b><small>صفحه ما</small></span>
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <a id="facebookLink" class="contact-card facebook" href="#" rel="noopener noreferrer">
-          <i class="fa-brands fa-facebook"></i>
-          <span><b>Facebook</b><small>صفحه ما</small></span>
-          <i class="fa-solid fa-arrow-left"></i>
-        </a>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- ========== FOOTER ========== -->
-<footer>
-  <div class="container footer-inner">
-    <div class="footer-brand">
-      <img src="images/omh-logo.svg" alt="OMH">
-      <div>
-        <b data-site-name>OMH Social Services</b>
-        <small data-footer-text>© 2026 OMH Social Services. تمامی حقوق محفوظ است.</small>
-      </div>
-    </div>
-
-    <div class="footer-links">
-      <a href="#home">خانه</a>
-      <a href="#services">خدمات</a>
-      <a href="#posts">نشرات</a>
-      <a href="#reviews">نظرات</a>
-      <a href="#contact">تماس</a>
-    </div>
-
-    <div class="footer-social">
-      <a id="footerWhatsapp" href="#" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-      <a id="footerTelegram" href="#" rel="noopener noreferrer" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
-      <a id="footerInstagram" href="#" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
-      <a id="footerFacebook" href="#" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+    <div class="hero-brand-card">
+      <div class="hero-ring"></div><div class="hero-brand-image"><img src="images/omh-logo.png" alt="OMH"></div>
+      <div class="hero-mini-cards"><span><i class="fa-solid fa-globe"></i> Digital</span><span><i class="fa-solid fa-chart-line"></i> Growth</span><span><i class="fa-solid fa-bolt"></i> Fast</span></div>
     </div>
   </div>
-</footer>
-
-<!-- ========== FLOATING WHATSAPP ========== -->
-<a class="floating-whatsapp" id="floatingWhatsapp" href="#" rel="noopener noreferrer" aria-label="گفتگو در واتساپ">
-  <i class="fa-brands fa-whatsapp"></i>
-  <span class="floating-tooltip">نیاز به کمک داری؟</span>
-</a>
-
-<!-- ========== TOAST ========== -->
-<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-<!-- ========== MOBILE OVERLAY ========== -->
-<div class="menu-overlay" id="menuOverlay" hidden></div>
-
+  <div class="hero-socials"><span>YOUR DIGITAL PARTNER</span><i class="fa-brands fa-facebook-f"></i><i class="fa-brands fa-instagram"></i><i class="fa-brands fa-telegram"></i><i class="fa-brands fa-whatsapp"></i><i class="fa-brands fa-tiktok"></i><i class="fa-brands fa-x-twitter"></i></div>
+</section>
+<section class="trust-strip"><div class="container trust-grid"><article><span><i class="fa-solid fa-bolt"></i></span><div><strong>سریع</strong><small>رسیدگی به سفارش</small></div></article><article><span><i class="fa-solid fa-shield-halved"></i></span><div><strong>مطمئن</strong><small>توجه به امنیت و اعتبار</small></div></article><article><span><i class="fa-solid fa-headset"></i></span><div><strong>پشتیبانی</strong><small>ارتباط آسان با ما</small></div></article><article><span><i class="fa-solid fa-gem"></i></span><div><strong>حرفه‌ای</strong><small>طراحی و خدمات مدرن</small></div></article></div></section>
+<section class="section services-section" id="services"><div class="container">
+  <div class="section-head"><div><span class="section-kicker">OUR SERVICES</span><h2>سرویسی که می‌خواهی، همین‌جاست.</h2><p>هر سرویس با قالب مشخص، آیکن واضح و اطلاعات مرتب نمایش داده می‌شود.</p></div><div class="section-mark"><b>OMH</b><span>DIGITAL</span></div></div>
+  <div class="service-toolbar"><label class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input id="searchInput" type="search" placeholder="نام سرویس را جستجو کن..." autocomplete="off"></label><div class="toolbar-note"><i class="fa-solid fa-sliders"></i> دسته‌بندی را انتخاب کن</div></div>
+  <div class="category-tabs" id="categoryTabs"></div><div class="subcategory-tabs" id="subcategoryTabs"></div>
+  <div class="services-grid" id="servicesGrid"><div class="loading-card"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال بارگذاری سرویس‌ها...</span></div></div>
+</div></section>
+<section class="featured-section" id="featured"><div class="container"><div class="section-head compact"><div><span class="section-kicker">FEATURED</span><h2>پیشنهادهای ویژه</h2></div><span class="featured-line"></span></div><div class="featured-grid" id="featuredGrid"><div class="loading-card">در حال بارگذاری...</div></div></div></section>
+<section class="section posts-section" id="posts"><div class="container"><div class="section-head compact"><div><span class="section-kicker">LATEST POSTS</span><h2>نشرات و مطالب</h2><p>آخرین مطالب منتشرشده توسط OMH.</p></div></div><div class="posts-grid" id="postsGrid"><div class="loading-card">در حال بارگذاری...</div></div></div></section>
+<section class="section reviews-section" id="reviews"><div class="container"><div class="section-head compact"><div><span class="section-kicker">CLIENT VOICES</span><h2>نظر مشتریان</h2><p>نظرهای تأییدشده مشتریان را ببین و تجربه خودت را ثبت کن.</p></div></div><div class="review-layout">
+<form id="reviewForm" class="review-form"><div class="form-heading"><span class="form-icon"><i class="fa-solid fa-star"></i></span><div><h3>تجربه‌ات را بنویس</h3><p>نظر تو بعد از بررسی در سایت نمایش داده می‌شود.</p></div></div><div class="form-grid"><label>نام<input id="reviewName" maxlength="80" required placeholder="نام شما"></label><label>سرویس<select id="reviewService" required><option value="">انتخاب سرویس</option></select></label><label>امتیاز<select id="reviewRating" required><option value="">انتخاب امتیاز</option><option value="5">★★★★★ عالی</option><option value="4">★★★★ خوب</option><option value="3">★★★ متوسط</option><option value="2">★★ ضعیف</option><option value="1">★ خیلی ضعیف</option></select></label></div><label>نظر شما<textarea id="reviewComment" maxlength="1000" required placeholder="تجربه خود را بنویسید..."></textarea></label><button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> ارسال نظر</button><p id="reviewMessage" class="form-message" aria-live="polite"></p></form>
+<div class="reviews-grid" id="reviewsGrid"><div class="loading-card">در حال بارگذاری نظرات...</div></div>
+</div></div></section>
+<section class="about-section" id="about"><div class="container about-wrap"><div class="about-copy"><span class="section-kicker">ABOUT OMH</span><h2>یک مرجع برای خدمات دیجیتال</h2><p>OMH Social Services با هدف ساده‌تر کردن دسترسی به خدمات آنلاین ساخته شده است؛ از خدمات شبکه‌های اجتماعی و شماره‌های مجازی تا طراحی سایت و اپلیکیشن.</p><div class="about-points"><span><i class="fa-solid fa-check"></i> رابط کاربری منظم</span><span><i class="fa-solid fa-check"></i> سفارش آسان</span><span><i class="fa-solid fa-check"></i> پشتیبانی مستقیم</span></div></div><div class="about-logo"><div class="about-logo-glow"></div><img src="images/omh-logo.png" alt="OMH Social Services"></div></div></section>
+<section class="contact-section" id="contact"><div class="container"><div class="contact-banner"><div><span class="section-kicker">CONTACT</span><h2>برای سفارش آماده‌ای؟</h2><p>پیامت را بفرست؛ درباره سرویس مورد نیازت راهنمایی‌ات می‌کنیم.</p></div><a id="contactWhatsapp" class="btn btn-primary" href="#"><i class="fa-brands fa-whatsapp"></i> پیام در واتساپ</a></div><div class="contact-grid"><a id="whatsappLink" class="contact-card whatsapp" href="#"><span class="contact-icon"><i class="fa-brands fa-whatsapp"></i></span><span><b>WhatsApp</b><small>سفارش و پشتیبانی</small></span><i class="fa-solid fa-arrow-left"></i></a><a id="telegramLink" class="contact-card" href="#"><span class="contact-icon"><i class="fa-brands fa-telegram"></i></span><span><b>Telegram</b><small>ارتباط با ما</small></span><i class="fa-solid fa-arrow-left"></i></a><a id="instagramLink" class="contact-card" href="#"><span class="contact-icon"><i class="fa-brands fa-instagram"></i></span><span><b>Instagram</b><small>صفحه ما</small></span><i class="fa-solid fa-arrow-left"></i></a><a id="facebookLink" class="contact-card" href="#"><span class="contact-icon"><i class="fa-brands fa-facebook-f"></i></span><span><b>Facebook</b><small>صفحه ما</small></span><i class="fa-solid fa-arrow-left"></i></a></div></div></section>
+</main>
+<footer><div class="container footer-grid"><div class="footer-brand"><img src="images/omh-logo.png" alt="OMH"><div><strong data-site-name>OMH Social Services</strong><span>مرجع خدمات نوین دیجیتال</span><small data-footer-text>© 2026 OMH Social Services. تمامی حقوق محفوظ است.</small></div></div><div class="footer-links"><b>دسترسی سریع</b><a href="#home">خانه</a><a href="#services">خدمات</a><a href="#posts">نشرات</a><a href="#contact">تماس</a></div><div class="footer-links"><b>خدمات</b><a href="#services">شبکه‌های اجتماعی</a><a href="#services">شماره مجازی</a><a href="#services">طراحی سایت</a><a href="#services">اپلیکیشن</a></div><div class="footer-social"><b>ما را دنبال کنید</b><div><a id="footerWhatsapp" href="#" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a><a id="footerTelegram" href="#" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a><a id="footerInstagram" href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a><a id="footerFacebook" href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a></div></div></div><div class="container footer-bottom"><span>OMH Social Services</span><span>ساخته‌شده برای یک تجربه دیجیتال بهتر</span></div></footer>
+<a class="floating-whatsapp" id="floatingWhatsapp" href="#" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
 <script src="main.js" defer></script>
-</body>
-</html>
+</body></html>
