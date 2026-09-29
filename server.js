@@ -16,10 +16,12 @@ const app = express();
 const PORT = Number(process.env.PORT || 5000);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const USING_SERVICE_ROLE = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and a Supabase key are required.');
+if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
+if (SUPABASE_URL && !USING_SERVICE_ROLE) console.warn('⚠️ Backend admin/storage operations require SUPABASE_SERVICE_ROLE_KEY.');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }
@@ -122,7 +124,7 @@ const writeLimiter = rateLimit({
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.mimetype))
+  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(file.mimetype))
 });
 
 async function getAdmin(req) {
@@ -169,7 +171,7 @@ async function ensureStorageBucket(bucket) {
   const { error } = await supabase.storage.createBucket(bucket, {
     public: true,
     fileSizeLimit: '5MB',
-    allowedMimeTypes: ['image/jpeg','image/png','image/webp','image/gif','image/svg+xml']
+    allowedMimeTypes: ['image/jpeg','image/png','image/webp']
   });
   if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
   storageReady.add(bucket);
@@ -178,7 +180,7 @@ async function ensureStorageBucket(bucket) {
 async function uploadImage(req, res) {
   if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده یا فرمت آن مجاز نیست.');
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
-  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg'};
+  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
   const ext = extMap[req.file.mimetype];
   if (!ext) return fail(res, 400, 'فرمت تصویر مجاز نیست.');
   try {
@@ -280,7 +282,7 @@ app.get('/api/services/:id',async(req,res)=>{try{const id=idValue(req.params.id)
 app.get('/api/reviews',async(req,res)=>{try{let q=supabase.from('reviews').select('*').eq('is_approved',true).order('created_at',{ascending:false});if(req.query.serviceId)q=q.eq('service_id',idValue(req.query.serviceId));const {data,error}=await q;if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/reviews',writeLimiter,async(req,res)=>{try{const service_id=idValue(req.body?.service_id);const customer_name=stringValue(req.body?.customer_name,80,true);const comment=stringValue(req.body?.comment,1000,true);const rating=numberValue(req.body?.rating,{min:1,max:5,integer:true,fallback:0});if(!service_id||!customer_name||!comment||!rating)return fail(res,400,'نام، امتیاز، متن نظر و سرویس الزامی است.');const {data:service}=await supabase.from('services').select('id').eq('id',service_id).eq('is_active',true).maybeSingle();if(!service)return fail(res,404,'سرویس پیدا نشد.');const {data,error}=await supabase.from('reviews').insert({service_id,customer_name,rating,comment,is_approved:false}).select().single();if(error)throw error;res.status(201).json({message:'نظر شما ثبت شد و پس از تأیید نمایش داده می‌شود.',data});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/posts',async(_req,res)=>{try{const {data,error}=await supabase.from('posts').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/posts/:id/like',writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data:post,error:getError}=await supabase.from('posts').select('likes').eq('id',id).eq('is_active',true).maybeSingle();if(getError||!post)return fail(res,404,'نشر پیدا نشد.');const likes=numberValue(post.likes,{min:0,integer:true})+1;const {data,error}=await supabase.from('posts').update({likes}).eq('id',id).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/posts/:id/like',writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data,error}=await supabase.rpc('increment_post_likes',{post_id:id});if(error)throw error;if(!data)return fail(res,404,'نشر پیدا نشد.');res.json({id,likes:Number(data)});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/announcements',async(_req,res)=>{try{const {data,error}=await supabase.from('announcements').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/settings',async(_req,res)=>{try{const {data,error}=await supabase.from('settings').select('key,value');if(error)throw error;const out={};for(const item of data||[])if(publicSettings.has(item.key))out[item.key]=item.value;res.json(out);}catch(e){fail(res,500,safeError(e));}});
 
