@@ -132,6 +132,11 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(file.mimetype))
 });
+const uploadPdf = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype === 'application/pdf')
+});
 
 async function getAdmin(req) {
   const token = req.cookies?.admin_session;
@@ -207,6 +212,37 @@ async function uploadImage(req, res) {
   }
 }
 
+
+async function uploadPdfFile(req, res) {
+  if (!req.file) return fail(res, 400, 'فایل PDF ارسال نشده یا فرمت آن مجاز نیست.');
+  const bucket = process.env.SUPABASE_DOCUMENT_BUCKET || 'omh-documents';
+  try {
+    await ensureDocumentBucket(bucket);
+    const objectPath = `posts/${uuidv4()}.pdf`;
+    const { error } = await supabase.storage.from(bucket).upload(objectPath, req.file.buffer, {
+      contentType: 'application/pdf', cacheControl: '31536000', upsert: false
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+    if (!data?.publicUrl) throw new Error('Public URL was not created');
+    return res.status(201).json({ url: data.publicUrl, path: objectPath, name: req.file.originalname, size: req.file.size });
+  } catch (e) {
+    console.error('PDF upload failed:', e);
+    return fail(res, 500, 'آپلود PDF انجام نشد. Storage و Service Role Key را بررسی کنید.');
+  }
+}
+
+async function ensureDocumentBucket(bucket) {
+  if (storageReady.has(`doc:${bucket}`)) return;
+  const { data: existing, error: listError } = await supabase.storage.listBuckets();
+  if (!listError && existing?.some(b => b.name === bucket)) { storageReady.add(`doc:${bucket}`); return; }
+  const { error } = await supabase.storage.createBucket(bucket, {
+    public: true, fileSizeLimit: '20MB', allowedMimeTypes: ['application/pdf']
+  });
+  if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
+  storageReady.add(`doc:${bucket}`);
+}
+
 function servicePayload(body) {
   return {
     subcategory_id: idValue(body?.subcategory_id),
@@ -237,6 +273,21 @@ app.get('/', (_req,res)=>res.sendFile(path.join(__dirname,'public','index.html')
 app.get('/admin', (_req,res)=>res.sendFile(path.join(__dirname,'public','admin','index.html')));
 app.get('/admin/dashboard', (_req,res)=>res.sendFile(path.join(__dirname,'public','admin','dashboard.html')));
 app.get('/api/health', (_req,res)=>res.json({status:'OK',message:'Server is running!'}));
+let fxCache = { at: 0, data: null };
+app.get('/api/exchange-rates', async (_req,res)=>{
+  try {
+    const now=Date.now();
+    if(fxCache.data && now-fxCache.at < 30*60*1000) return res.json(fxCache.data);
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    if(!r.ok) throw new Error('FX provider unavailable');
+    const j=await r.json();
+    const a=Number(j?.rates?.AFN), p=Number(j?.rates?.PKR), i=Number(j?.rates?.IRR), e=Number(j?.rates?.EUR), t=Number(j?.rates?.TRY);
+    if(!a||!p||!i||!e||!t) throw new Error('Incomplete FX data');
+    const data={base:'AFN',updated_at:j.time_last_update_utc||new Date().toISOString(),rates:{USD:a,PKR:a/p,IRR:a/i,EUR:a/e,TRY:a/t}};
+    fxCache={at:now,data};res.json(data);
+  } catch(e) { if(fxCache.data) return res.json(fxCache.data); res.status(503).json({error:'نرخ اسعار فعلاً در دسترس نیست.'}); }
+});
+
 
 // Authentication
 app.post('/api/admin/login', loginLimiter, async (req,res)=>{
@@ -302,6 +353,7 @@ app.get('/api/settings',async(_req,res)=>{try{const {data,error}=await supabase.
 // Admin APIs
 app.get('/api/admin/stats',requireAdmin,async(_req,res)=>{try{const results=await Promise.all([supabase.from('categories').select('id',{count:'exact',head:true}),supabase.from('subcategories').select('id',{count:'exact',head:true}),supabase.from('services').select('id',{count:'exact',head:true}),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',true),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',false),supabase.from('posts').select('id',{count:'exact',head:true}),supabase.from('guides').select('id',{count:'exact',head:true})]);for(const r of results)if(r.error)throw r.error;res.json({totalCategories:results[0].count||0,totalSubcategories:results[1].count||0,totalServices:results[2].count||0,totalReviews:results[3].count||0,pendingReviews:results[4].count||0,totalPosts:results[5].count||0,totalGuides:results[6].count||0});}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/admin/upload',requireAdmin,writeLimiter,upload.single('file'),async(req,res)=>{try{await uploadImage(req,res);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/admin/upload-pdf',requireAdmin,writeLimiter,uploadPdf.single('file'),async(req,res)=>{try{await uploadPdfFile(req,res);}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/categories',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('categories').select('*').order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/categories',requireAdmin,writeLimiter,async(req,res)=>{try{const name=stringValue(req.body?.name,100,true),name_ps=stringValue(req.body?.name_ps,100),name_en=stringValue(req.body?.name_en,100);if(!name)return fail(res,400,'نام دسته‌بندی الزامی است.');const row={name,name_ps,name_en,slug:slugValue(req.body?.slug||name),icon:stringValue(req.body?.icon,50),description:stringValue(req.body?.description,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};const {data,error}=await supabase.from('categories').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
 app.put('/api/categories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={name:stringValue(req.body?.name,100,true),name_ps:stringValue(req.body?.name_ps,100),name_en:stringValue(req.body?.name_en,100),slug:slugValue(req.body?.slug||req.body?.name),icon:stringValue(req.body?.icon,100),description:stringValue(req.body?.description,500),description_ps:stringValue(req.body?.description_ps,500),description_en:stringValue(req.body?.description_en,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};if(!row.name)return fail(res,400,'نام دسته‌بندی الزامی است.');const {data,error}=await supabase.from('categories').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
@@ -319,8 +371,8 @@ app.put('/api/reviews/:id/approve',requireAdmin,writeLimiter,async(req,res)=>{tr
 app.put('/api/reviews/:id/reject',requireAdmin,writeLimiter,async(req,res)=>{try{const {data,error}=await supabase.from('reviews').update({is_approved:false}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/reviews/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('reviews').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/posts',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('posts').select('*').order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/posts',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').insert({title,title_ps, title_en, content,content_ps,content_en,is_active:boolValue(req.body?.is_active,true),likes:0}).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
-app.put('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').update({title,title_ps,title_en,content,content_ps,content_en,is_active:boolValue(req.body?.is_active,true)}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/posts',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000),pdf_url=urlValue(req.body?.pdf_url),pdf_name=stringValue(req.body?.pdf_name,255);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').insert({title,title_ps,title_en,content,content_ps,content_en,pdf_url,pdf_name,is_active:boolValue(req.body?.is_active,true),likes:0}).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
+app.put('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000),pdf_url=urlValue(req.body?.pdf_url),pdf_name=stringValue(req.body?.pdf_name,255);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data:errorData,error}=await supabase.from('posts').update({title,title_ps,title_en,content,content_ps,content_en,pdf_url,pdf_name,is_active:boolValue(req.body?.is_active,true)}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(errorData);return;if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('posts').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/announcements',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('announcements').select('*').order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/announcements',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),content:stringValue(req.body?.content,1000,true),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('announcements').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});

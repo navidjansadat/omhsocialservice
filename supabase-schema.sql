@@ -240,3 +240,8 @@ select s.id,v.name,v.name_ps,v.name_en,v.slug,v.short_fa,v.short_ps,v.short_en,0
 ) v(sub_slug,name,name_ps,name_en,slug,short_fa,short_ps,short_en,"order")
 join public.subcategories s on s.slug=v.sub_slug
 where not exists (select 1 from public.services x where x.slug=v.slug);
+
+-- OMH v4: PDF publications and safe document storage metadata
+alter table public.posts add column if not exists pdf_url text default '';
+alter table public.posts add column if not exists pdf_name varchar(255) default '';
+create index if not exists idx_posts_pdf on public.posts(pdf_url) where pdf_url <> '';
