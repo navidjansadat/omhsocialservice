@@ -1,69 +1,65 @@
-# OMH Social Services — Final v3
+# OMH Social Services — Final
 
-نسخه بازطراحی‌شده و چندزبانه OMH Social Services.
+نسخه نهایی بازسازی و یکپارچه‌شده OMH Social Services با تمرکز روی پایداری، امنیت، تجربه موبایل و مدیریت کامل محتوا.
 
-## امکانات اصلی
+## ساختار دیتابیس مورد استفاده
+- `admins`
+- `categories`
+- `subcategories`
+- `services`
+- `reviews`
+- `posts`
+- `announcements`
+- `settings`
 
-- طراحی جدید با هویت آبی/نئونی OMH
-- استفاده از `public/images/omh-logo.png` به‌عنوان لوگو
-- استفاده از `public/images/omh-background.png` در Hero
-- نوار خوش‌آمدگویی متحرک در بالای سایت
-- سه زبان: دری/فارسی، پشتو، English
-- انتخاب دسته خدمات بدون گزینه «همه سرویس‌ها»
-- بعد از انتخاب هر دسته، فقط سرویس‌های همان دسته نمایش داده می‌شود
-- زیردسته‌ها نیز بعد از انتخاب دسته نمایش داده می‌شوند
-- جستجوی سرویس فقط داخل دسته انتخاب‌شده
-- کارت یکدست برای هر سرویس با فقط یک آیکن واضح
-- اگر تصویر سرویس آپلود شود، در قاب استاندارد با `object-fit: contain` نمایش داده می‌شود
-- اگر تصویر وجود نداشته باشد، آیکن پیش‌فرض بر اساس نام سرویس انتخاب می‌شود
-- مرکز راهنما برای شماره مجازی، افزایش فالوور/ممبر، پریموم برنامه‌ها، طراحی دیجیتال و امنیت
-- مدیریت کامل راهنما از پنل ادمین در سه زبان
-- مدیریت نام و توضیحات دسته‌ها، زیردسته‌ها و سرویس‌ها در سه زبان
-- مدیریت نشرات در سه زبان
-- مدیریت پیام متحرک و متن پرداخت در سه زبان
-- پشتیبانی از Credit و MoMo در متن سایت
-- کانال رسمی WhatsApp داخل بخش ارتباط
-- پنل ادمین بازطراحی‌شده با مدیریت خدمات، دسته‌ها، راهنما، نشرات، اعلان‌ها، نظرات و تنظیمات
-- Atomic Like counter
-- محدودیت آپلود به JPG/PNG/WEBP
-- حذف فایل قدیمی پنل
+## قابلیت‌ها
+### سایت عمومی
+- هدر ریسپانسیو و منوی واقعی موبایل
+- Dark / Light Mode با ذخیره انتخاب کاربر
+- لوگوی پیش‌فرض داخلی + امکان تعویض لوگو از پنل
+- دسته‌بندی → زیردسته → سرویس
+- جستجوی ترکیبی خدمات
+- قیمت، تخفیف، واحد، زمان تحویل، گارانتی، تصویر و سرویس ویژه
+- سفارش سرویس از طریق WhatsApp
+- ثبت نظر مشتری با انتخاب سرویس و امتیاز؛ نظرها قبل از انتشار تأیید می‌شوند
+- نشرات و Like
+- اعلان‌های فعال در بالای سایت
+- شبکه‌های اجتماعی قابل تنظیم
+- طراحی موبایل و دسکتاپ متعادل
 
-## راه‌اندازی
+### پنل مدیریت
+- ورود امن با session cookie و bcrypt
+- محافظت APIهای مدیریتی
+- rate limit برای ورود و عملیات نوشتن
+- مدیریت دسته‌بندی، زیردسته، سرویس، نظرات، نشرات و اعلان‌ها
+- آپلود و تعویض تصویر سرویس
+- آپلود و حذف لوگو
+- جستجو و فیلتر داخل پنل
+- Dark / Light Mode برای پنل
+- خطای یک بخش باعث از کار افتادن کل داشبورد نمی‌شود
 
-1. در Supabase یک پروژه بسازید.
-2. فایل `supabase-schema.sql` را **کامل** در SQL Editor اجرا کنید. این فایل هم برای دیتابیس تازه و هم برای ارتقای ساختار قبلی شامل `ALTER TABLE`های لازم است.
-3. در Render یا محیط محلی این متغیرها را تنظیم کنید:
-
-```env
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-SUPABASE_STORAGE_BUCKET=omh-assets
+## Render Environment Variables
+```text
 PORT=5000
-FRONTEND_ORIGINS=https://your-domain.example
+NODE_ENV=production
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET=omh-assets
+FRONTEND_ORIGINS=https://YOUR_RENDER_DOMAIN.onrender.com
 ```
 
-4. نصب و اجرا:
+`SUPABASE_SERVICE_ROLE_KEY` را فقط در Render قرار دهید و هرگز در frontend یا GitHub منتشر نکنید.
 
+## Storage
+سرور هنگام اولین آپلود تلاش می‌کند Bucket با نام `omh-assets` را در صورت نبودن ایجاد کند. اگر پروژه Supabase اجازه ساخت Bucket از API را ندهد، از Supabase → Storage یک Bucket عمومی با همین نام بسازید.
+
+## اجرا
 ```bash
 npm install
 npm start
 ```
 
-## ورود اولیه پنل
-
-- مسیر: `/admin`
-- Username: `admin`
-- Password: `OMH@Admin2026!`
-
-بعد از اولین ورود، رمز پیش‌فرض را تغییر دهید.
-
-## فایل‌های مهم
-
-- `server.js` — Backend و API
-- `public/index.html` — سایت
-- `public/main.js` — منطق سایت و زبان‌ها
-- `public/style.css` — طراحی سایت
-- `public/admin/dashboard.html` — پنل مدیریت
-- `public/admin/app.js` — منطق پنل
-- `public/admin/style.css` — طراحی پنل
-- `supabase-schema.sql` — ساخت/ارتقای دیتابیس
+سایت:
+- `/`
+- `/admin`
+- `/admin/dashboard`

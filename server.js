@@ -16,12 +16,10 @@ const app = express();
 const PORT = Number(process.env.PORT || 5000);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const USING_SERVICE_ROLE = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
-if (SUPABASE_URL && !USING_SERVICE_ROLE) console.warn('⚠️ Backend admin/storage operations require SUPABASE_SERVICE_ROLE_KEY.');
+if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and a Supabase key are required.');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }
@@ -39,7 +37,7 @@ const allowedOrigins = new Set(
 
 const publicSettings = new Set([
   'site_name','whatsapp','telegram','facebook','instagram','footer_text',
-  'announcement','logo_url','favicon_url','welcome_ticker_fa','welcome_ticker_ps','welcome_ticker_en','payment_text_fa','payment_text_ps','payment_text_en'
+  'announcement','logo_url','favicon_url'
 ]);
 
 function stringValue(value, max = 1000, required = false) {
@@ -80,12 +78,6 @@ const settingValidators = {
   instagram: v => urlValue(v),
   footer_text: v => stringValue(v, 500),
   announcement: v => stringValue(v, 500),
-  welcome_ticker_fa: v => stringValue(v, 300),
-  welcome_ticker_ps: v => stringValue(v, 300),
-  welcome_ticker_en: v => stringValue(v, 300),
-  payment_text_fa: v => stringValue(v, 500),
-  payment_text_ps: v => stringValue(v, 500),
-  payment_text_en: v => stringValue(v, 500),
   logo_url: v => urlValue(v),
   favicon_url: v => urlValue(v)
 };
@@ -130,12 +122,7 @@ const writeLimiter = rateLimit({
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(file.mimetype))
-});
-const uploadPdf = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => cb(null, file.mimetype === 'application/pdf')
+  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.mimetype))
 });
 
 async function getAdmin(req) {
@@ -182,7 +169,7 @@ async function ensureStorageBucket(bucket) {
   const { error } = await supabase.storage.createBucket(bucket, {
     public: true,
     fileSizeLimit: '5MB',
-    allowedMimeTypes: ['image/jpeg','image/png','image/webp']
+    allowedMimeTypes: ['image/jpeg','image/png','image/webp','image/gif','image/svg+xml']
   });
   if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
   storageReady.add(bucket);
@@ -191,7 +178,7 @@ async function ensureStorageBucket(bucket) {
 async function uploadImage(req, res) {
   if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده یا فرمت آن مجاز نیست.');
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
-  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};
+  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg'};
   const ext = extMap[req.file.mimetype];
   if (!ext) return fail(res, 400, 'فرمت تصویر مجاز نیست.');
   try {
@@ -212,50 +199,13 @@ async function uploadImage(req, res) {
   }
 }
 
-
-async function uploadPdfFile(req, res) {
-  if (!req.file) return fail(res, 400, 'فایل PDF ارسال نشده یا فرمت آن مجاز نیست.');
-  const bucket = process.env.SUPABASE_DOCUMENT_BUCKET || 'omh-documents';
-  try {
-    await ensureDocumentBucket(bucket);
-    const objectPath = `posts/${uuidv4()}.pdf`;
-    const { error } = await supabase.storage.from(bucket).upload(objectPath, req.file.buffer, {
-      contentType: 'application/pdf', cacheControl: '31536000', upsert: false
-    });
-    if (error) throw error;
-    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-    if (!data?.publicUrl) throw new Error('Public URL was not created');
-    return res.status(201).json({ url: data.publicUrl, path: objectPath, name: req.file.originalname, size: req.file.size });
-  } catch (e) {
-    console.error('PDF upload failed:', e);
-    return fail(res, 500, 'آپلود PDF انجام نشد. Storage و Service Role Key را بررسی کنید.');
-  }
-}
-
-async function ensureDocumentBucket(bucket) {
-  if (storageReady.has(`doc:${bucket}`)) return;
-  const { data: existing, error: listError } = await supabase.storage.listBuckets();
-  if (!listError && existing?.some(b => b.name === bucket)) { storageReady.add(`doc:${bucket}`); return; }
-  const { error } = await supabase.storage.createBucket(bucket, {
-    public: true, fileSizeLimit: '20MB', allowedMimeTypes: ['application/pdf']
-  });
-  if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
-  storageReady.add(`doc:${bucket}`);
-}
-
 function servicePayload(body) {
   return {
     subcategory_id: idValue(body?.subcategory_id),
     name: stringValue(body?.name, 120, true),
-    name_ps: stringValue(body?.name_ps, 120),
-    name_en: stringValue(body?.name_en, 120),
     slug: slugValue(body?.slug || body?.name),
     description: stringValue(body?.description, 2000),
-    description_ps: stringValue(body?.description_ps, 2000),
-    description_en: stringValue(body?.description_en, 2000),
     short_description: stringValue(body?.short_description, 300),
-    short_description_ps: stringValue(body?.short_description_ps, 300),
-    short_description_en: stringValue(body?.short_description_en, 300),
     price: numberValue(body?.price, { min: 0, max: 1e9 }),
     discount: numberValue(body?.discount, { min: 0, max: 100 }),
     unit: stringValue(body?.unit, 50),
@@ -273,21 +223,6 @@ app.get('/', (_req,res)=>res.sendFile(path.join(__dirname,'public','index.html')
 app.get('/admin', (_req,res)=>res.sendFile(path.join(__dirname,'public','admin','index.html')));
 app.get('/admin/dashboard', (_req,res)=>res.sendFile(path.join(__dirname,'public','admin','dashboard.html')));
 app.get('/api/health', (_req,res)=>res.json({status:'OK',message:'Server is running!'}));
-let fxCache = { at: 0, data: null };
-app.get('/api/exchange-rates', async (_req,res)=>{
-  try {
-    const now=Date.now();
-    if(fxCache.data && now-fxCache.at < 30*60*1000) return res.json(fxCache.data);
-    const r=await fetch('https://open.er-api.com/v6/latest/USD');
-    if(!r.ok) throw new Error('FX provider unavailable');
-    const j=await r.json();
-    const a=Number(j?.rates?.AFN), p=Number(j?.rates?.PKR), i=Number(j?.rates?.IRR), e=Number(j?.rates?.EUR), t=Number(j?.rates?.TRY);
-    if(!a||!p||!i||!e||!t) throw new Error('Incomplete FX data');
-    const data={base:'AFN',updated_at:j.time_last_update_utc||new Date().toISOString(),rates:{USD:a,PKR:a/p,IRR:a/i,EUR:a/e,TRY:a/t}};
-    fxCache={at:now,data};res.json(data);
-  } catch(e) { if(fxCache.data) return res.json(fxCache.data); res.status(503).json({error:'نرخ اسعار فعلاً در دسترس نیست.'}); }
-});
-
 
 // Authentication
 app.post('/api/admin/login', loginLimiter, async (req,res)=>{
@@ -345,22 +280,20 @@ app.get('/api/services/:id',async(req,res)=>{try{const id=idValue(req.params.id)
 app.get('/api/reviews',async(req,res)=>{try{let q=supabase.from('reviews').select('*').eq('is_approved',true).order('created_at',{ascending:false});if(req.query.serviceId)q=q.eq('service_id',idValue(req.query.serviceId));const {data,error}=await q;if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/reviews',writeLimiter,async(req,res)=>{try{const service_id=idValue(req.body?.service_id);const customer_name=stringValue(req.body?.customer_name,80,true);const comment=stringValue(req.body?.comment,1000,true);const rating=numberValue(req.body?.rating,{min:1,max:5,integer:true,fallback:0});if(!service_id||!customer_name||!comment||!rating)return fail(res,400,'نام، امتیاز، متن نظر و سرویس الزامی است.');const {data:service}=await supabase.from('services').select('id').eq('id',service_id).eq('is_active',true).maybeSingle();if(!service)return fail(res,404,'سرویس پیدا نشد.');const {data,error}=await supabase.from('reviews').insert({service_id,customer_name,rating,comment,is_approved:false}).select().single();if(error)throw error;res.status(201).json({message:'نظر شما ثبت شد و پس از تأیید نمایش داده می‌شود.',data});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/posts',async(_req,res)=>{try{const {data,error}=await supabase.from('posts').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/posts/:id/like',writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data,error}=await supabase.rpc('increment_post_likes',{post_id:id});if(error)throw error;if(!data)return fail(res,404,'نشر پیدا نشد.');res.json({id,likes:Number(data)});}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/posts/:id/like',writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data:post,error:getError}=await supabase.from('posts').select('likes').eq('id',id).eq('is_active',true).maybeSingle();if(getError||!post)return fail(res,404,'نشر پیدا نشد.');const likes=numberValue(post.likes,{min:0,integer:true})+1;const {data,error}=await supabase.from('posts').update({likes}).eq('id',id).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/announcements',async(_req,res)=>{try{const {data,error}=await supabase.from('announcements').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.get('/api/guides',async(_req,res)=>{try{const {data,error}=await supabase.from('guides').select('*').eq('is_active',true).order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/settings',async(_req,res)=>{try{const {data,error}=await supabase.from('settings').select('key,value');if(error)throw error;const out={};for(const item of data||[])if(publicSettings.has(item.key))out[item.key]=item.value;res.json(out);}catch(e){fail(res,500,safeError(e));}});
 
 // Admin APIs
-app.get('/api/admin/stats',requireAdmin,async(_req,res)=>{try{const results=await Promise.all([supabase.from('categories').select('id',{count:'exact',head:true}),supabase.from('subcategories').select('id',{count:'exact',head:true}),supabase.from('services').select('id',{count:'exact',head:true}),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',true),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',false),supabase.from('posts').select('id',{count:'exact',head:true}),supabase.from('guides').select('id',{count:'exact',head:true})]);for(const r of results)if(r.error)throw r.error;res.json({totalCategories:results[0].count||0,totalSubcategories:results[1].count||0,totalServices:results[2].count||0,totalReviews:results[3].count||0,pendingReviews:results[4].count||0,totalPosts:results[5].count||0,totalGuides:results[6].count||0});}catch(e){fail(res,500,safeError(e));}});
+app.get('/api/admin/stats',requireAdmin,async(_req,res)=>{try{const results=await Promise.all([supabase.from('categories').select('id',{count:'exact',head:true}),supabase.from('subcategories').select('id',{count:'exact',head:true}),supabase.from('services').select('id',{count:'exact',head:true}),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',true),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('is_approved',false),supabase.from('posts').select('id',{count:'exact',head:true})]);for(const r of results)if(r.error)throw r.error;res.json({totalCategories:results[0].count||0,totalSubcategories:results[1].count||0,totalServices:results[2].count||0,totalReviews:results[3].count||0,pendingReviews:results[4].count||0,totalPosts:results[5].count||0});}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/admin/upload',requireAdmin,writeLimiter,upload.single('file'),async(req,res)=>{try{await uploadImage(req,res);}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/admin/upload-pdf',requireAdmin,writeLimiter,uploadPdf.single('file'),async(req,res)=>{try{await uploadPdfFile(req,res);}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/categories',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('categories').select('*').order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/categories',requireAdmin,writeLimiter,async(req,res)=>{try{const name=stringValue(req.body?.name,100,true),name_ps=stringValue(req.body?.name_ps,100),name_en=stringValue(req.body?.name_en,100);if(!name)return fail(res,400,'نام دسته‌بندی الزامی است.');const row={name,name_ps,name_en,slug:slugValue(req.body?.slug||name),icon:stringValue(req.body?.icon,50),description:stringValue(req.body?.description,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};const {data,error}=await supabase.from('categories').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
-app.put('/api/categories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={name:stringValue(req.body?.name,100,true),name_ps:stringValue(req.body?.name_ps,100),name_en:stringValue(req.body?.name_en,100),slug:slugValue(req.body?.slug||req.body?.name),icon:stringValue(req.body?.icon,100),description:stringValue(req.body?.description,500),description_ps:stringValue(req.body?.description_ps,500),description_en:stringValue(req.body?.description_en,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};if(!row.name)return fail(res,400,'نام دسته‌بندی الزامی است.');const {data,error}=await supabase.from('categories').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/categories',requireAdmin,writeLimiter,async(req,res)=>{try{const name=stringValue(req.body?.name,100,true);if(!name)return fail(res,400,'نام دسته‌بندی الزامی است.');const row={name,slug:slugValue(req.body?.slug||name),icon:stringValue(req.body?.icon,50),description:stringValue(req.body?.description,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};const {data,error}=await supabase.from('categories').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
+app.put('/api/categories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={name:stringValue(req.body?.name,100,true),slug:slugValue(req.body?.slug||req.body?.name),icon:stringValue(req.body?.icon,50),description:stringValue(req.body?.description,500),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};if(!row.name)return fail(res,400,'نام دسته‌بندی الزامی است.');const {data,error}=await supabase.from('categories').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/categories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data:subs}=await supabase.from('subcategories').select('id').eq('category_id',id).limit(1);if(subs?.length)return fail(res,409,'این دسته‌بندی زیردسته دارد. ابتدا آن‌ها را حذف یا جابه‌جا کنید.');const {error}=await supabase.from('categories').delete().eq('id',id);if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/subcategories',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('subcategories').select('*, categories(id,name,slug)').order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/subcategories',requireAdmin,writeLimiter,async(req,res)=>{try{const name=stringValue(req.body?.name,100,true),name_ps=stringValue(req.body?.name_ps,100),name_en=stringValue(req.body?.name_en,100),category_id=idValue(req.body?.category_id);if(!name||!category_id)return fail(res,400,'دسته‌بندی و نام الزامی است.');const row={category_id,name,name_ps,name_en,slug:slugValue(req.body?.slug||name),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};const {data,error}=await supabase.from('subcategories').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
-app.put('/api/subcategories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={category_id:idValue(req.body?.category_id),name:stringValue(req.body?.name,100,true),name_ps:stringValue(req.body?.name_ps,100),name_en:stringValue(req.body?.name_en,100),slug:slugValue(req.body?.slug||req.body?.name),icon:stringValue(req.body?.icon,100),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};if(!row.name||!row.category_id)return fail(res,400,'دسته‌بندی و نام الزامی است.');const {data,error}=await supabase.from('subcategories').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/subcategories',requireAdmin,writeLimiter,async(req,res)=>{try{const name=stringValue(req.body?.name,100,true),category_id=idValue(req.body?.category_id);if(!name||!category_id)return fail(res,400,'دسته‌بندی و نام الزامی است.');const row={category_id,name,slug:slugValue(req.body?.slug||name),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};const {data,error}=await supabase.from('subcategories').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
+app.put('/api/subcategories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={category_id:idValue(req.body?.category_id),name:stringValue(req.body?.name,100,true),slug:slugValue(req.body?.slug||req.body?.name),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true),order:numberValue(req.body?.order,{min:0,max:999999,integer:true})};if(!row.name||!row.category_id)return fail(res,400,'دسته‌بندی و نام الزامی است.');const {data,error}=await supabase.from('subcategories').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/subcategories/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data:services}=await supabase.from('services').select('id').eq('subcategory_id',id).limit(1);if(services?.length)return fail(res,409,'این زیردسته سرویس دارد. ابتدا سرویس‌ها را جابه‌جا یا حذف کنید.');const {error}=await supabase.from('subcategories').delete().eq('id',id);if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/services',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('services').select('*, subcategories(id,name,slug,category_id,categories(id,name,slug))').order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/services',requireAdmin,writeLimiter,async(req,res)=>{try{const row=servicePayload(req.body);if(!row.name||!row.subcategory_id)return fail(res,400,'زیردسته و نام سرویس الزامی است.');const {data,error}=await supabase.from('services').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
@@ -371,17 +304,13 @@ app.put('/api/reviews/:id/approve',requireAdmin,writeLimiter,async(req,res)=>{tr
 app.put('/api/reviews/:id/reject',requireAdmin,writeLimiter,async(req,res)=>{try{const {data,error}=await supabase.from('reviews').update({is_approved:false}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/reviews/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('reviews').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/posts',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('posts').select('*').order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/posts',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000),pdf_url=urlValue(req.body?.pdf_url),pdf_name=stringValue(req.body?.pdf_name,255);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').insert({title,title_ps,title_en,content,content_ps,content_en,pdf_url,pdf_name,is_active:boolValue(req.body?.is_active,true),likes:0}).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
-app.put('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),title_ps=stringValue(req.body?.title_ps,160),title_en=stringValue(req.body?.title_en,160),content=stringValue(req.body?.content,5000,true),content_ps=stringValue(req.body?.content_ps,5000),content_en=stringValue(req.body?.content_en,5000),pdf_url=urlValue(req.body?.pdf_url),pdf_name=stringValue(req.body?.pdf_name,255);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data:errorData,error}=await supabase.from('posts').update({title,title_ps,title_en,content,content_ps,content_en,pdf_url,pdf_name,is_active:boolValue(req.body?.is_active,true)}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(errorData);return;if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/posts',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),content=stringValue(req.body?.content,5000,true);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').insert({title,content,is_active:boolValue(req.body?.is_active,true),likes:0}).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
+app.put('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),content=stringValue(req.body?.content,5000,true);if(!title||!content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('posts').update({title,content,is_active:boolValue(req.body?.is_active,true)}).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/posts/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('posts').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/admin/announcements',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('announcements').select('*').order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/announcements',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),content:stringValue(req.body?.content,1000,true),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('announcements').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
 app.put('/api/announcements/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),content:stringValue(req.body?.content,1000,true),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('announcements').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/announcements/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('announcements').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
-app.get('/api/admin/guides',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('guides').select('*').order('order',{ascending:true});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
-app.post('/api/guides',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,180,true),title_ps:stringValue(req.body?.title_ps,180),title_en:stringValue(req.body?.title_en,180),content:stringValue(req.body?.content,5000,true),content_ps:stringValue(req.body?.content_ps,5000),content_en:stringValue(req.body?.content_en,5000),icon:stringValue(req.body?.icon,100),order:numberValue(req.body?.order,{min:0,max:999999,integer:true}),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن فارسی الزامی است.');const {data,error}=await supabase.from('guides').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
-app.put('/api/guides/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,180,true),title_ps:stringValue(req.body?.title_ps,180),title_en:stringValue(req.body?.title_en,180),content:stringValue(req.body?.content,5000,true),content_ps:stringValue(req.body?.content_ps,5000),content_en:stringValue(req.body?.content_en,5000),icon:stringValue(req.body?.icon,100),order:numberValue(req.body?.order,{min:0,max:999999,integer:true}),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن فارسی الزامی است.');const {data,error}=await supabase.from('guides').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
-app.delete('/api/guides/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('guides').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.put('/api/settings',requireAdmin,writeLimiter,async(req,res)=>{try{const updates=req.body&&typeof req.body==='object'?req.body:{};const accepted=Object.entries(updates).filter(([key])=>publicSettings.has(key));if(!accepted.length)return fail(res,400,'تنظیمات معتبر نیست.');let previousLogo='';if(accepted.some(([key])=>key==='logo_url')){const {data}=await supabase.from('settings').select('value').eq('key','logo_url').maybeSingle();previousLogo=data?.value||'';}const payload=accepted.map(([key,raw])=>({key,value:settingValidators[key]?settingValidators[key](raw):stringValue(raw,1000)}));const {error}=await supabase.from('settings').upsert(payload,{onConflict:'key'});if(error)throw error;const newLogo=updates.logo_url?String(updates.logo_url):'';if(previousLogo&&previousLogo!==newLogo)await storageRemoveByUrl(previousLogo);res.json({message:'تنظیمات ذخیره شد.'});}catch(e){fail(res,500,safeError(e));}});
 
 app.use((err,_req,res,_next)=>{console.error(err);if(!res.headersSent)res.status(500).json({error:'خطای داخلی سرور'});});
