@@ -36,7 +36,7 @@ const allowedOrigins = new Set(
 );
 
 const publicSettings = new Set([
-  'site_name','whatsapp','telegram','facebook','instagram','footer_text',
+  'site_name','whatsapp','telegram','facebook','instagram','whatsapp_channel','telegram_channel','footer_text',
   'announcement','logo_url','favicon_url'
 ]);
 
@@ -76,6 +76,8 @@ const settingValidators = {
   telegram: v => urlValue(v),
   facebook: v => urlValue(v),
   instagram: v => urlValue(v),
+  whatsapp_channel: v => urlValue(v),
+  telegram_channel: v => urlValue(v),
   footer_text: v => stringValue(v, 500),
   announcement: v => stringValue(v, 500),
   logo_url: v => urlValue(v),
@@ -124,6 +126,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.mimetype))
 });
+const pdfUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 1 }, fileFilter: (_req,file,cb)=>cb(null,file.mimetype==='application/pdf') });
 
 async function getAdmin(req) {
   const token = req.cookies?.admin_session;
@@ -175,6 +178,19 @@ async function ensureStorageBucket(bucket) {
   storageReady.add(bucket);
 }
 
+async function ensurePdfBucket(){
+  const bucket='omh-documents';
+  if(storageReady.has(bucket)) return bucket;
+  const {data:existing,error:listError}=await supabase.storage.listBuckets();
+  if(!listError && existing?.some(b=>b.name===bucket)){storageReady.add(bucket);return bucket;}
+  const {error}=await supabase.storage.createBucket(bucket,{public:true,fileSizeLimit:'20MB',allowedMimeTypes:['application/pdf']});
+  if(error && !/already exists|duplicate/i.test(error.message||'')) throw error;
+  storageReady.add(bucket);return bucket;
+}
+async function uploadPdf(req,res){
+  if(!req.file) return fail(res,400,'فایل PDF ارسال نشده است.');
+  try{const bucket=await ensurePdfBucket();const objectPath=`public/${uuidv4()}.pdf`;const {error}=await supabase.storage.from(bucket).upload(objectPath,req.file.buffer,{contentType:'application/pdf',cacheControl:'31536000',upsert:false});if(error)throw error;const {data}=supabase.storage.from(bucket).getPublicUrl(objectPath);if(!data?.publicUrl)throw new Error('Public URL was not created');res.status(201).json({url:data.publicUrl,path:objectPath});}catch(e){console.error('PDF upload failed:',e);return fail(res,500,'آپلود PDF انجام نشد.');}
+}
 async function uploadImage(req, res) {
   if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده یا فرمت آن مجاز نیست.');
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
@@ -280,6 +296,7 @@ app.get('/api/services/:id',async(req,res)=>{try{const id=idValue(req.params.id)
 app.get('/api/reviews',async(req,res)=>{try{let q=supabase.from('reviews').select('*').eq('is_approved',true).order('created_at',{ascending:false});if(req.query.serviceId)q=q.eq('service_id',idValue(req.query.serviceId));const {data,error}=await q;if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/reviews',writeLimiter,async(req,res)=>{try{const service_id=idValue(req.body?.service_id);const customer_name=stringValue(req.body?.customer_name,80,true);const comment=stringValue(req.body?.comment,1000,true);const rating=numberValue(req.body?.rating,{min:1,max:5,integer:true,fallback:0});if(!service_id||!customer_name||!comment||!rating)return fail(res,400,'نام، امتیاز، متن نظر و سرویس الزامی است.');const {data:service}=await supabase.from('services').select('id').eq('id',service_id).eq('is_active',true).maybeSingle();if(!service)return fail(res,404,'سرویس پیدا نشد.');const {data,error}=await supabase.from('reviews').insert({service_id,customer_name,rating,comment,is_approved:false}).select().single();if(error)throw error;res.status(201).json({message:'نظر شما ثبت شد و پس از تأیید نمایش داده می‌شود.',data});}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/posts',async(_req,res)=>{try{const {data,error}=await supabase.from('posts').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
+app.get('/api/documents',async(_req,res)=>{try{const {data,error}=await supabase.from('documents').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.post('/api/posts/:id/like',writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data:post,error:getError}=await supabase.from('posts').select('likes').eq('id',id).eq('is_active',true).maybeSingle();if(getError||!post)return fail(res,404,'نشر پیدا نشد.');const likes=numberValue(post.likes,{min:0,integer:true})+1;const {data,error}=await supabase.from('posts').update({likes}).eq('id',id).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/announcements',async(_req,res)=>{try{const {data,error}=await supabase.from('announcements').select('*').eq('is_active',true).order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
 app.get('/api/settings',async(_req,res)=>{try{const {data,error}=await supabase.from('settings').select('key,value');if(error)throw error;const out={};for(const item of data||[])if(publicSettings.has(item.key))out[item.key]=item.value;res.json(out);}catch(e){fail(res,500,safeError(e));}});
@@ -311,6 +328,11 @@ app.get('/api/admin/announcements',requireAdmin,async(_req,res)=>{try{const {dat
 app.post('/api/announcements',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),content:stringValue(req.body?.content,1000,true),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('announcements').insert(row).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
 app.put('/api/announcements/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),content:stringValue(req.body?.content,1000,true),icon:stringValue(req.body?.icon,50),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.content)return fail(res,400,'عنوان و متن الزامی است.');const {data,error}=await supabase.from('announcements').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
 app.delete('/api/announcements/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const {error}=await supabase.from('announcements').delete().eq('id',idValue(req.params.id));if(error)throw error;res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
+app.get('/api/admin/documents',requireAdmin,async(_req,res)=>{try{const {data,error}=await supabase.from('documents').select('*').order('created_at',{ascending:false});if(error)throw error;res.json(rows(data));}catch(e){fail(res,500,safeError(e));}});
+app.post('/api/admin/upload-pdf',requireAdmin,writeLimiter,pdfUpload.single('file'),async(req,res)=>{await uploadPdf(req,res);});
+app.post('/api/documents',requireAdmin,writeLimiter,async(req,res)=>{try{const title=stringValue(req.body?.title,160,true),description=stringValue(req.body?.description,1000),language=stringValue(req.body?.language,20)||'fa',file_url=urlValue(req.body?.file_url);if(!title||!file_url)return fail(res,400,'عنوان و فایل PDF الزامی است.');const {data,error}=await supabase.from('documents').insert({title,description,language,file_url,is_active:boolValue(req.body?.is_active,true)}).select().single();if(error)throw error;res.status(201).json(data);}catch(e){fail(res,500,safeError(e));}});
+app.put('/api/documents/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const row={title:stringValue(req.body?.title,160,true),description:stringValue(req.body?.description,1000),language:stringValue(req.body?.language,20)||'fa',file_url:urlValue(req.body?.file_url),is_active:boolValue(req.body?.is_active,true)};if(!row.title||!row.file_url)return fail(res,400,'عنوان و فایل PDF الزامی است.');const {data,error}=await supabase.from('documents').update(row).eq('id',idValue(req.params.id)).select().single();if(error)throw error;res.json(data);}catch(e){fail(res,500,safeError(e));}});
+app.delete('/api/documents/:id',requireAdmin,writeLimiter,async(req,res)=>{try{const id=idValue(req.params.id);const {data}=await supabase.from('documents').select('file_url').eq('id',id).maybeSingle();const {error}=await supabase.from('documents').delete().eq('id',id);if(error)throw error;if(data?.file_url)await storageRemoveByUrl(data.file_url);res.json({message:'حذف شد'});}catch(e){fail(res,500,safeError(e));}});
 app.put('/api/settings',requireAdmin,writeLimiter,async(req,res)=>{try{const updates=req.body&&typeof req.body==='object'?req.body:{};const accepted=Object.entries(updates).filter(([key])=>publicSettings.has(key));if(!accepted.length)return fail(res,400,'تنظیمات معتبر نیست.');let previousLogo='';if(accepted.some(([key])=>key==='logo_url')){const {data}=await supabase.from('settings').select('value').eq('key','logo_url').maybeSingle();previousLogo=data?.value||'';}const payload=accepted.map(([key,raw])=>({key,value:settingValidators[key]?settingValidators[key](raw):stringValue(raw,1000)}));const {error}=await supabase.from('settings').upsert(payload,{onConflict:'key'});if(error)throw error;const newLogo=updates.logo_url?String(updates.logo_url):'';if(previousLogo&&previousLogo!==newLogo)await storageRemoveByUrl(previousLogo);res.json({message:'تنظیمات ذخیره شد.'});}catch(e){fail(res,500,safeError(e));}});
 
 app.use((err,_req,res,_next)=>{console.error(err);if(!res.headersSent)res.status(500).json({error:'خطای داخلی سرور'});});
