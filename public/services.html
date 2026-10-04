@@ -1,1 +1,52 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07111f"><title>خدمات | OMH Social Services</title><link rel="icon" href="images/omh-logo-circle.png"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><link rel="stylesheet" href="style.css"></head><body><main><section class="section services-page" style="padding-top:55px"><div class="container"><div class="services-category-wrap reveal"><div class="services-category-title"><span><i class="fa-solid fa-layer-group"></i> دسته‌بندی خدمات</span><small>دسته مورد نظر را انتخاب کنید</small></div><div id="servicesCategories" class="services-category-nav"></div></div><div class="services-hero-head reveal"><div><span class="section-kicker"><i class="fa-solid fa-layer-group"></i> OMH SERVICES</span><h1>خدمات دیجیتال، مرتب و حرفه‌ای</h1><p>دسته‌بندی مورد نظر را انتخاب کنید؛ خدمات همان دسته در قالب Grid View نمایش داده می‌شود.</p></div><div class="services-badge"><i class="fa-solid fa-grid-2"></i><span>Grid View</span><small>مرتب • سریع • زیبا</small></div></div><div class="service-toolbar reveal"><label class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="serviceSearch" type="search" placeholder="جستجو در خدمات این دسته..."></label><div class="current-category" id="currentCategory"><i class="fa-solid fa-folder-open"></i><span>دسته خدمات</span></div></div><div id="subcategories" class="subcategories"></div><div id="servicesGrid" class="services-grid service-grid-premium"></div></div></section></main><script src="site.js" defer></script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>خدمات | OMH Social Services</title>
+<link rel="icon" href="images/omh-logo-circle.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<section class="section services-simple-page">
+<div class="container">
+  <div class="services-simple-head reveal">
+    <div>
+      <span class="simple-kicker"><i class="fa-solid fa-store"></i> خدمات OMH</span>
+      <h1>خدمت مورد نیازت را پیدا کن</h1>
+      <p>دسته را انتخاب کن یا نام خدمت را جستجو کن؛ سپس مستقیم سفارش بده.</p>
+    </div>
+    <div class="services-count" id="servicesCount"><b>۰</b><span>خدمت</span></div>
+  </div>
+
+  <div class="services-find reveal">
+    <div class="services-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="serviceSearch" type="search" placeholder="مثلاً: فالوور، شماره مجازی، کپ‌کات، طراحی سایت...">
+      <button id="clearServiceSearch" type="button" aria-label="پاک کردن"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+
+  <div class="services-layout">
+    <aside class="services-categories reveal">
+      <div class="categories-title"><i class="fa-solid fa-layer-group"></i><b>دسته‌بندی</b></div>
+      <div id="servicesCategories" class="simple-category-list"></div>
+    </aside>
+
+    <div class="services-results">
+      <div class="results-head reveal">
+        <div><span class="results-label">در حال نمایش</span><h2 id="currentCategory">همه خدمات</h2></div>
+        <button class="mobile-category-btn" id="mobileCategoryBtn" type="button"><i class="fa-solid fa-sliders"></i> دسته‌ها</button>
+      </div>
+      <div id="servicesGrid" class="easy-services-grid"></div>
+    </div>
+  </div>
+</div>
+</section>
+</main>
+<script src="site.js" defer></script>
+</body>
+</html>
