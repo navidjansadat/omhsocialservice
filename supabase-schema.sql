@@ -124,7 +124,7 @@ grant execute on function public.increment_post_likes(uuid) to anon, authenticat
 -- automatically uses them until an administrator uploads a custom logo.
 insert into public.settings(key,value) values
 ('site_name','OMH Social Services'),
-('whatsapp','9370000000'),
+('whatsapp','93748070273'),
 ('telegram','https://t.me/OMHSocial'),
 ('facebook',''),
 ('instagram',''),

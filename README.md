@@ -68,3 +68,15 @@ npm start
 ```
 
 نکته: قبل از استفاده از PDF، `supabase-final-migration.sql` را اجرا کنید.
+
+
+## OMH redesign and deployment checklist
+
+- The public site has a new editorial visual identity (warm paper, deep forest green and lime), responsive hero, service pathways, project CTA, and a separate optional dark mode.
+- The admin panel uses a matching light control-room design and keeps the existing management workflows and API contracts.
+- Use **only** `SUPABASE_SERVICE_ROLE_KEY` on the server. Never place it in frontend JavaScript or a public environment variable.
+- Run `supabase-maintenance-migration.sql` in the Supabase SQL Editor for an existing database. It adds missing update/PDF columns and timestamps safely without deleting existing records.
+- Make sure the Supabase Storage buckets `omh-assets` and `omh-documents` (or the bucket names configured by the project) permit public reads for assets intended to be public. Uploads are authenticated by the Node backend.
+- After first deployment, sign in with the initial admin credentials defined in `supabase-schema.sql` only if this is a fresh database, then change the password immediately. Do not leave the default password in production.
+- In Render, set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `FRONTEND_ORIGINS` to the actual production values. Do not commit `.env`.
+- Verify login, upload, category/service edits, post publication, PDF upload, and settings updates against the real Supabase project before going live.

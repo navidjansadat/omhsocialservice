@@ -16,10 +16,10 @@ const app = express();
 const PORT = Number(process.env.PORT || 5000);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 
-if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and a Supabase key are required.');
+if (!SUPABASE_URL || !SUPABASE_KEY) console.warn('⚠️ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for the admin backend.');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false }
@@ -28,7 +28,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const defaultOrigins = [
   `http://localhost:${PORT}`,
   'http://localhost:3000',
-  'https://omhservices-laig.onrender.com'
+  'https://omhsocialservices-vnqk.onrender.com'
 ];
 const allowedOrigins = new Set(
   (process.env.FRONTEND_ORIGINS || defaultOrigins.join(','))
@@ -124,7 +124,7 @@ const writeLimiter = rateLimit({
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif|svg\+xml)$/.test(file.mimetype))
+  fileFilter: (_req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype))
 });
 const pdfUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 1 }, fileFilter: (_req,file,cb)=>cb(null,file.mimetype==='application/pdf') });
 
@@ -172,7 +172,7 @@ async function ensureStorageBucket(bucket) {
   const { error } = await supabase.storage.createBucket(bucket, {
     public: true,
     fileSizeLimit: '5MB',
-    allowedMimeTypes: ['image/jpeg','image/png','image/webp','image/gif','image/svg+xml']
+    allowedMimeTypes: ['image/jpeg','image/png','image/webp','image/gif']
   });
   if (error && !/already exists|duplicate/i.test(error.message || '')) throw error;
   storageReady.add(bucket);
@@ -194,7 +194,7 @@ async function uploadPdf(req,res){
 async function uploadImage(req, res) {
   if (!req.file) return fail(res, 400, 'فایل تصویر ارسال نشده یا فرمت آن مجاز نیست.');
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'omh-assets';
-  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/svg+xml':'svg'};
+  const extMap = {'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'};
   const ext = extMap[req.file.mimetype];
   if (!ext) return fail(res, 400, 'فرمت تصویر مجاز نیست.');
   try {
